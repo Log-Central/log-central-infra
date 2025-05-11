@@ -84,7 +84,7 @@
         "x": 0,
         "y": 0
       },
-      "id": 2,
+      "id": 3,
       "options": {
         "legend": {
           "calcs": [],
@@ -138,6 +138,7 @@
           "custom": {
             "align": "auto",
             "displayMode": "auto",
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -187,6 +188,10 @@
               {
                 "id": "custom.displayMode",
                 "value": "color-background"
+              },
+              {
+                "id": "custom.filterable",
+                "value": true
               }
             ]
           },
@@ -199,6 +204,50 @@
               {
                 "id": "custom.width",
                 "value": 200
+              },
+              {
+                "id": "custom.filterable",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "message"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 400
+              },
+              {
+                "id": "custom.filterable",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "service"
+            },
+            "properties": [
+              {
+                "id": "custom.filterable",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "id"
+            },
+            "properties": [
+              {
+                "id": "custom.filterable",
+                "value": true
               }
             ]
           }
@@ -242,7 +291,32 @@
         }
       ],
       "title": "로그 목록",
-      "transformations": [],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_source": true,
+              "_type": true,
+              "highlight": true,
+              "host": true,
+              "pid": true,
+              "sort": true,
+              "user_field": true
+            },
+            "indexByName": {
+              "@timestamp": 0,
+              "id": 1,
+              "level": 2,
+              "message": 3,
+              "service": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
       "type": "table"
     },
     {
@@ -428,6 +502,29 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "Elasticsearch"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"service\"}",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"service\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -437,8 +534,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "로그 대시보드 1",
-  "uid": "logs-dashboard1",
+  "title": "로그 대시보드 2",
+  "uid": "logs-dashboard2",
   "version": 1,
   "weekStart": ""
 }
