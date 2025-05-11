@@ -143,12 +143,15 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin # 비밀번호
       - GF_USERS_ALLOW_SIGN_UP="false" # 일반 사용자 가입 금지
       - GF_AUTH_ANONYMOUS_ENABLED="true" # 익명 조회 허용
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ALLOW_EMBEDDING=true # 대시보드 외부 웹사이트에서 임베드(삽입)할 수 있도록
     volumes:
-      - ./grafana/provisioning/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
     networks:
       - elk-net
+    restart: unless-stopped
 
 networks:
   elk-net:
