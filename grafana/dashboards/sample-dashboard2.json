@@ -117,7 +117,7 @@
               "type": "count"
             }
           ],
-          "query": "level: INFO OR level: ERROR OR level: WARN",
+          "query": "level: INFO OR level: ERROR OR level: WARN OR level: DEBUG OR level: WARNING",
           "refId": "A",
           "timeField": "@timestamp"
         }
@@ -168,17 +168,30 @@
                 "value": [
                   {
                     "options": {
+                      "DEBUG": {
+                        "color": "purple",
+                        "index": 3,
+                        "text": "DEBUG"
+                      },
                       "ERROR": {
                         "color": "red",
-                        "index": 2
+                        "index": 2,
+                        "text": "ERROR"
                       },
                       "INFO": {
-                        "color": "blue",
-                        "index": 0
+                        "color": "green",
+                        "index": 0,
+                        "text": "INFO"
                       },
                       "WARN": {
                         "color": "orange",
-                        "index": 1
+                        "index": 1,
+                        "text": "WARN"
+                      },
+                      "WARNING": {
+                        "color": "yellow",
+                        "index": 4,
+                        "text": "WARNING"
                       }
                     },
                     "type": "value"
@@ -187,7 +200,7 @@
               },
               {
                 "id": "custom.displayMode",
-                "value": "color-background"
+                "value": "color-text"
               },
               {
                 "id": "custom.filterable",
@@ -233,6 +246,12 @@
               "options": "service"
             },
             "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              },
               {
                 "id": "custom.filterable",
                 "value": true
@@ -327,7 +346,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "custom": {
             "hideFrom": {
@@ -338,7 +358,83 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "INFO"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WARN"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ERROR"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DEBUG"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WARNING"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -348,18 +444,18 @@
       },
       "id": 6,
       "options": {
-        "displayLabels": ["percent", "name"],
+        "displayLabels": ["name", "value", "percent"],
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "right",
           "showLegend": true,
-          "values": ["percent", "value"]
+          "values": ["value", "percent"]
         },
         "pieType": "pie",
         "reduceOptions": {
-          "calcs": ["sum"],
+          "calcs": ["lastNotNull"],
           "fields": "",
-          "values": false
+          "values": true
         },
         "tooltip": {
           "mode": "single",
@@ -394,6 +490,7 @@
         }
       ],
       "title": "로그 레벨 분포",
+      "transformations": [],
       "type": "piechart"
     },
     {
@@ -404,7 +501,7 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed"
           },
           "custom": {
             "hideFrom": {
@@ -415,7 +512,83 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "api-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "test-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "db-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "database-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "web-service"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -425,18 +598,18 @@
       },
       "id": 8,
       "options": {
-        "displayLabels": ["name", "percent"],
+        "displayLabels": ["name", "value", "percent"],
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "right",
           "showLegend": true,
-          "values": ["value"]
+          "values": ["value", "percent"]
         },
         "pieType": "pie",
         "reduceOptions": {
-          "calcs": ["sum"],
+          "calcs": ["lastNotNull"],
           "fields": "",
-          "values": false
+          "values": true
         },
         "tooltip": {
           "mode": "single",
@@ -471,6 +644,7 @@
         }
       ],
       "title": "서비스별 로그 분포",
+      "transformations": [],
       "type": "piechart"
     }
   ],
