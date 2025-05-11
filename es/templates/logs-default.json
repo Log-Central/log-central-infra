@@ -1,0 +1,30 @@
+{
+  "index_patterns": ["logs-*"],
+  "priority": 500,
+  "composed_of": ["ecs@mappings"],
+  "template": {
+    "mappings": {
+      "dynamic_templates": [
+        {
+          "user_fields_flattened": {
+            "match_mapping_type": "*",
+            "match": "*",
+            "path_match": "*",
+            "mapping": { "type": "flattened" }
+          }
+        },
+        {
+          "override_user_defined": {
+            "match": "*",
+            "unmatch": "@*|ecs.*|message|@timestamp",
+            "mapping": { "type": "flattened" }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "message": { "type": "match_only_text" }
+      }
+    }
+  }
+}

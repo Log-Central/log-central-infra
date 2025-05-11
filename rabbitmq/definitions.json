@@ -1,0 +1,74 @@
+{
+  "exchanges": [
+    {
+      "name": "app_logs_exchange",
+      "type": "direct",
+      "durable": true,
+      "vhost": "/"
+    }
+  ],
+  "queues": [
+    {
+      "name": "logs_pipeline_1",
+      "vhost": "/",
+      "durable": true,
+      "arguments": { "x-queue-type": "quorum" }
+    },
+    {
+      "name": "logs_pipeline_2",
+      "vhost": "/",
+      "durable": true,
+      "arguments": { "x-queue-type": "quorum" }
+    },
+    {
+      "name": "logs_pipeline_3",
+      "vhost": "/",
+      "durable": true,
+      "arguments": { "x-queue-type": "quorum" }
+    },
+    {
+      "name": "logs_pipeline_4",
+      "vhost": "/",
+      "durable": true,
+      "arguments": { "x-queue-type": "quorum" }
+    },
+    {
+      "name": "worker_tasks_queue",
+      "vhost": "/",
+      "durable": true,
+      "arguments": { "x-queue-type": "quorum" }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "app_logs_exchange",
+      "destination": "logs_pipeline_1",
+      "destination_type": "queue",
+      "routing_key": "logs_1"
+    },
+    {
+      "source": "app_logs_exchange",
+      "destination": "logs_pipeline_2",
+      "destination_type": "queue",
+      "routing_key": "logs_2"
+    },
+    {
+      "source": "app_logs_exchange",
+      "destination": "logs_pipeline_3",
+      "destination_type": "queue",
+      "routing_key": "logs_3"
+    },
+    {
+      "source": "app_logs_exchange",
+      "destination": "logs_pipeline_4",
+      "destination_type": "queue",
+      "routing_key": "logs_4"
+    },
+    {
+      "source": "app_logs_exchange",
+      "destination": "worker_tasks_queue",
+      "destination_type": "queue",
+      "routing_key": "tasks"
+    }
+  ]
+}

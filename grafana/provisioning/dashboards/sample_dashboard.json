@@ -1,0 +1,45 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "sample_logs_dashboard",
+    "title": "Sample Logs Dashboard",
+    "tags": ["auto-provisioned"],
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "panels": [
+      {
+        "type": "table",
+        "id": 1,
+        "title": "Logs Table",
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "elastic-main"
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "query": "*",
+            "bucketAggs": [],
+            "metrics": [
+              {
+                "type": "Count",
+                "id": "1"
+              }
+            ],
+            "timeField": "@timestamp"
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        }
+      }
+    ]
+  },
+  "folderId": 0,
+  "overwrite": true
+}

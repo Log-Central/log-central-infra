@@ -1,0 +1,158 @@
+version: "3.8"
+
+services:
+  # ─ RabbitMQ 3-node Quorum cluster ──────────────────────────
+  rabbit1:
+    image: rabbitmq:3-management
+    hostname: rabbit1
+    container_name: rabbit1
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=cluster_secret
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+      - RABBITMQ_NODENAME=rabbit@rabbit1
+    volumes:
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/data/rabbit1:/var/lib/rabbitmq/mnesia
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - elk-net
+
+  rabbit2:
+    image: rabbitmq:3-management
+    hostname: rabbit2
+    container_name: rabbit2
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=cluster_secret
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+      - RABBITMQ_NODENAME=rabbit@rabbit2
+    volumes:
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/data/rabbit2:/var/lib/rabbitmq/mnesia
+    networks:
+      - elk-net
+
+  rabbit3:
+    image: rabbitmq:3-management
+    hostname: rabbit3
+    container_name: rabbit3
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=cluster_secret
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+      - RABBITMQ_NODENAME=rabbit@rabbit3
+    volumes:
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/data/rabbit3:/var/lib/rabbitmq/mnesia
+    networks:
+      - elk-net
+
+  # ─ Elasticsearch ───────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+
+    healthcheck:
+      disable: true
+    ports:
+      - "9200:9200"
+    networks:
+      - elk-net
+
+  es-init:
+    image: curlimages/curl:7.85.0
+    container_name: es-init
+    depends_on:
+      - elasticsearch
+    entrypoint: >
+      sh -c '
+        echo "Waiting for Elasticsearch to be ready…";
+        until curl -s http://elasticsearch:9200; do
+          sleep 5;
+        done;
+        echo "Elasticsearch is up – loading index template…";
+        curl -X PUT "http://elasticsearch:9200/_index_template/logs-default" \
+             -H "Content-Type: application/json" \
+             --data @/templates/logs-default.json;
+        echo "Index template loaded.";
+      '
+    volumes:
+      - ./es/templates/logs-default.json:/templates/logs-default.json:ro
+    networks:
+      - elk-net
+
+  # ─ Logstash 4 instances ────────────────────────────────────
+  logstash1:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash1
+    depends_on: [rabbit1, rabbit2, rabbit3, elasticsearch]
+    volumes:
+      - ./logstash/pipeline1:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  logstash2:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash2
+    depends_on: [rabbit1, rabbit2, rabbit3, elasticsearch]
+    volumes:
+      - ./logstash/pipeline2:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  logstash3:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash3
+    depends_on: [rabbit1, rabbit2, rabbit3, elasticsearch]
+    volumes:
+      - ./logstash/pipeline3:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  logstash4:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash4
+    depends_on: [rabbit1, rabbit2, rabbit3, elasticsearch]
+    command: >
+      bash -c "echo 'pipeline.workers: 1' \
+        >> /usr/share/logstash/config/logstash.yml \
+        && /usr/local/bin/docker-entrypoint"
+    volumes:
+      - ./logstash/pipeline4:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin # 대시보드 초기 관리자 계정 :contentReference[oaicite:0]{index=0}
+      - GF_SECURITY_ADMIN_PASSWORD=admin # 비밀번호
+      - GF_USERS_ALLOW_SIGN_UP="false" # 일반 사용자 가입 금지
+      - GF_AUTH_ANONYMOUS_ENABLED="true" # 익명 조회 허용
+    volumes:
+      - ./grafana/provisioning/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-data:/var/lib/grafana
+    networks:
+      - elk-net
+
+networks:
+  elk-net:
+    driver: bridge
+
+volumes:
+  grafana-data:
