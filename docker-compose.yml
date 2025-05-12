@@ -74,14 +74,12 @@ services:
       - elasticsearch
     entrypoint: >
       sh -c '
-        echo "Waiting for Elasticsearch to be ready…";
-        until curl -s http://elasticsearch:9200; do
-          sleep 5;
-        done;
+        echo "Waiting for Elasticsearch…";
+        until curl -sf http://elasticsearch:9200; do sleep 5; done;
         echo "Elasticsearch is up – loading index template…";
-        curl -X PUT "http://elasticsearch:9200/_index_template/logs-default" \
+        curl -sf -X PUT "http://elasticsearch:9200/_index_template/logs-default" \
              -H "Content-Type: application/json" \
-             --data @/templates/logs-default.json;
+             --data "@/templates/logs-default.json";
         echo "Index template loaded.";
       '
     volumes:
