@@ -5,17 +5,17 @@ services:
     hostname: rabbit1
     container_name: rabbit1
     environment:
-      - RABBITMQ_ERLANG_COOKIE=cluster_secret
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
-      - RABBITMQ_NODENAME=rabbit@rabbit1
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit1
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - ./rabbitmq/data/rabbit1:/var/lib/rabbitmq/mnesia
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     networks:
       elk-net:
         aliases:
@@ -25,10 +25,10 @@ services:
     hostname: rabbit2
     container_name: rabbit2
     environment:
-      - RABBITMQ_ERLANG_COOKIE=cluster_secret
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
-      - RABBITMQ_NODENAME=rabbit@rabbit2
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit2
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
@@ -42,10 +42,10 @@ services:
     hostname: rabbit3
     container_name: rabbit3
     environment:
-      - RABBITMQ_ERLANG_COOKIE=cluster_secret
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
-      - RABBITMQ_NODENAME=rabbit@rabbit3
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit3
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
@@ -58,14 +58,14 @@ services:
   # ─ Elasticsearch ───────────────────────────────────────────
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: elasticsearch
+    container_name: log_elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
     healthcheck:
       disable: true
     ports:
-      - "9200:9200"
+      - "${ELASTICSEARCH_PORT}:9200"
     networks:
       - elk-net
 
@@ -185,10 +185,10 @@ services:
     depends_on:
       - elasticsearch
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT}:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin # 대시보드 초기 관리자 계정 :contentReference[oaicite:0]{index=0}
-      - GF_SECURITY_ADMIN_PASSWORD=admin # 비밀번호
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP="false" # 일반 사용자 가입 금지
       - GF_AUTH_ANONYMOUS_ENABLED="true" # 익명 조회 허용
 
