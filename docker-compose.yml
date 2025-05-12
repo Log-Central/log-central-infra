@@ -64,6 +64,8 @@ services:
       - xpack.security.enabled=false
     healthcheck:
       disable: true
+    ports:
+      - "9200:9200"
     networks:
       - elk-net
 
