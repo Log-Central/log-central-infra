@@ -191,9 +191,12 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED="true" # 익명 조회 허용
 
     volumes:
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
     networks:
       - elk-net
+    restart: unless-stopped
 
 networks:
   elk-net:
