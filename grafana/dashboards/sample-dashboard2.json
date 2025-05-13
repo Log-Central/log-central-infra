@@ -765,7 +765,7 @@
     "list": [
       {
         "current": {
-          "text": ["All"],
+          "text": "All",
           "value": ["$__all"]
         },
         "datasource": {
@@ -785,7 +785,7 @@
       {
         "current": {
           "text": "All",
-          "value": "$__all"
+          "value": ["$__all"]
         },
         "datasource": {
           "type": "elasticsearch",
@@ -800,6 +800,16 @@
         "refresh": 1,
         "regex": "",
         "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "P31C819B24CF3C3C7"
+        },
+        "filters": [],
+        "label": "Filters",
+        "name": "Filters",
+        "type": "adhoc"
       }
     ]
   },
@@ -811,5 +821,5 @@
   "timezone": "",
   "title": "로그 대시보드 2",
   "uid": "logs-dashboard2",
-  "version": 7
+  "version": 9
 }
