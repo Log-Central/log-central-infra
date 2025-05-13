@@ -198,7 +198,7 @@
               "type": "count"
             }
           ],
-          "query": "level: INFO OR level: ERROR OR level: WARN OR level: DEBUG OR level: WARNING",
+          "query": "level: ${level:lucene}",
           "refId": "A",
           "timeField": "@timestamp"
         }
@@ -360,7 +360,7 @@
               "type": "logs"
             }
           ],
-          "query": "",
+          "query": "level: ${level:lucene}",
           "refId": "A",
           "timeField": "@timestamp"
         }
@@ -512,11 +512,12 @@
           "values": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "10.2.0",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
           "bucketAggs": [
@@ -538,7 +539,7 @@
               "type": "count"
             }
           ],
-          "query": "",
+          "query": "level: ${level:lucene}",
           "refId": "A",
           "timeField": "@timestamp"
         }
@@ -555,8 +556,8 @@
     "list": [
       {
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": ["All"],
+          "value": ["$__all"]
         },
         "datasource": {
           "type": "elasticsearch",
@@ -582,5 +583,5 @@
   "timezone": "",
   "title": "로그 대시보드 (필수 필드만)",
   "uid": "logs-dashboard-minimal",
-  "version": 2
+  "version": 3
 }
