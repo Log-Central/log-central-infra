@@ -783,25 +783,6 @@
         "type": "query"
       },
       {
-        "current": {
-          "text": "All",
-          "value": ["$__all"]
-        },
-        "datasource": {
-          "type": "elasticsearch",
-          "uid": "Elasticsearch"
-        },
-        "definition": "{\"find\": \"terms\", \"field\": \"service\"}",
-        "includeAll": true,
-        "multi": true,
-        "name": "service",
-        "options": [],
-        "query": "{\"find\": \"terms\", \"field\": \"service\"}",
-        "refresh": 1,
-        "regex": "",
-        "type": "query"
-      },
-      {
         "datasource": {
           "type": "elasticsearch",
           "uid": "P31C819B24CF3C3C7"
@@ -821,5 +802,5 @@
   "timezone": "",
   "title": "로그 대시보드 2",
   "uid": "logs-dashboard2",
-  "version": 9
+  "version": 10
 }
