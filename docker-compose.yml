@@ -76,13 +76,29 @@ services:
       - elasticsearch
     entrypoint: >
       sh -c '
-        echo "Waiting for Elasticsearch…";
-        until curl -sf http://elasticsearch:9200; do sleep 5; done;
-        echo "Elasticsearch is up – loading index template…";
-        curl -sf -X PUT "http://elasticsearch:9200/_index_template/logs-default" \
+        echo "Waiting for Elasticsearch HTTP port…";
+        until curl -sf http://elasticsearch:9200; do
+          sleep 5;
+        done;
+
+        echo "Waiting for built-in ecs@mappings component template…";
+        # @는 %40으로 인코딩해야 정확히 감지됩니다
+        until curl -sf http://elasticsearch:9200/_component_template/ecs%40mappings; do
+          sleep 5;
+        done;
+
+        echo "All prerequisites met – loading logs-default index template…";
+
+        if response=$$(curl --fail-with-body -sS -X PUT \
+             "http://elasticsearch:9200/_index_template/logs-default" \
              -H "Content-Type: application/json" \
-             --data "@/templates/logs-default.json";
-        echo "Index template loaded.";
+             --data "@/templates/logs-default.json"); then
+          echo "✅ Index template loaded.";
+        else
+          echo "❌ Failed to load index template:" >&2;
+          echo "$$response" >&2;
+          exit 1;
+        fi
       '
     volumes:
       - ./es/templates/logs-default.json:/templates/logs-default.json:ro
@@ -181,7 +197,6 @@ services:
 
   grafana:
     image: grafana/grafana-oss:latest
-    container_name: grafana
     depends_on:
       - elasticsearch
     ports:

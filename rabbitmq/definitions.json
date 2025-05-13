@@ -21,8 +21,11 @@
     {
       "name": "app_logs_exchange",
       "type": "direct",
+      "vhost": "/",
       "durable": true,
-      "vhost": "/"
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
     }
   ],
   "queues": [
