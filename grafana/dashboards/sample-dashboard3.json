@@ -18,9 +18,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 3,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -33,9 +32,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -44,6 +47,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -65,8 +69,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -169,10 +172,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.0.0",
       "targets": [
         {
           "bucketAggs": [
@@ -217,15 +222,14 @@
               "type": "auto"
             },
             "filterable": true,
-            "inspect": false
+            "inspect": true
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -330,7 +334,9 @@
       },
       "id": 4,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "enablePagination": true,
           "fields": "",
           "reducer": ["sum"],
@@ -344,7 +350,7 @@
           }
         ]
       },
-      "pluginVersion": "10.2.0",
+      "pluginVersion": "12.0.0",
       "targets": [
         {
           "bucketAggs": [],
@@ -538,19 +544,17 @@
         }
       ],
       "title": "로그 레벨 분포",
-      "transformations": [],
       "type": "piechart"
     }
   ],
+  "preload": false,
   "refresh": "5s",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 41,
   "tags": ["logs", "elasticsearch"],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
           "text": "All",
           "value": "$__all"
         },
@@ -559,7 +563,6 @@
           "uid": "Elasticsearch"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"level\"}",
-        "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "level",
@@ -567,8 +570,6 @@
         "query": "{\"find\": \"terms\", \"field\": \"level\"}",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
@@ -579,8 +580,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "로그 대시보드",
+  "title": "로그 대시보드 (필수 필드만)",
   "uid": "logs-dashboard-minimal",
-  "version": 1,
-  "weekStart": ""
+  "version": 2
 }
