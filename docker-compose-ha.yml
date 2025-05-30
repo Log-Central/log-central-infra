@@ -1,10 +1,43 @@
+version: "2.4"
 services:
-  # ─ RabbitMQ ──────────────────────────
+  haproxy:
+    image: haproxy:2.4
+    container_name: haproxy
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+      rabbit2:
+        condition: service_healthy
+      rabbit3:
+        condition: service_healthy
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./haproxy/queue_ports.map:/etc/haproxy/queue_ports.map:ro
+      - ./haproxy/port_map.map:/etc/haproxy/port_map.map
+      - /var/run/haproxy.sock:/var/run/haproxy.sock
+    ports:
+      - "50000-50100:50000-50100"
+    networks:
+      - elk-net
+
+  map-updater:
+    build:
+      context: ./haproxy
+      dockerfile: Dockerfile.map
+    container_name: haproxy-map-updater
+    depends_on:
+      haproxy:
+        condition: service_started
+    volumes:
+      - ./haproxy/queue_ports.map:/etc/haproxy/queue_ports.map:ro
+      - ./haproxy/port_map.map:/etc/haproxy/port_map.map
+      - /var/run/haproxy.sock:/var/run/haproxy.sock
+    entrypoint: ["/update_map.sh"]
+
+  # ─ RabbitMQ 3-node Quorum cluster ──────────────────────────
   rabbit1:
     image: heidiks/rabbitmq-delayed-message-exchange:3.12.2-management
     hostname: rabbit1
-    mem_limit: "1g"
-    mem_reservation: "512m"
     container_name: rabbit1
     environment:
       - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
@@ -12,17 +45,116 @@ services:
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit1
     volumes:
-      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./rabbitmq/data/rabbit1:/var/lib/rabbitmq/mnesia
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     ports:
-      - "${EXTERNAL_RABBITMQ_PORT}:5672"
+      - "${EXTERNAL_HAPROXY_PORT}:5672"
       - "${EXTERNAL_RABBITMQ_MANAGEMENT_PORT}:15672"
     networks:
       elk-net:
         aliases:
-          - rabbitmq
+          - rabbit1
+  rabbit2:
+    image: heidiks/rabbitmq-delayed-message-exchange:3.12.2-management
+    hostname: rabbit2
+    container_name: rabbit2
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit2
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq/data/rabbit2:/var/lib/rabbitmq/mnesia
+    entrypoint: >
+      bash -c "
+        rabbitmq-server -detached &&
+        sleep 10 &&
+        rabbitmqctl stop_app &&
+        rabbitmqctl join_cluster ${RABBITMQ_NODENAME_PREFIX}rabbit1 &&
+        rabbitmqctl start_app &&
+        tail -f /dev/null
+      "
+    networks:
+      elk-net:
+        aliases:
+          - rabbit2
+  rabbit3:
+    image: heidiks/rabbitmq-delayed-message-exchange:3.12.2-management
+    hostname: rabbit3
+    container_name: rabbit3
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit3
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./rabbitmq/data/rabbit3:/var/lib/rabbitmq/mnesia
+    entrypoint: >
+      bash -c "
+        rabbitmq-server -detached &&
+        sleep 10 &&
+        rabbitmqctl stop_app &&
+        rabbitmqctl join_cluster ${RABBITMQ_NODENAME_PREFIX}rabbit1 &&
+        rabbitmqctl start_app &&
+        tail -f /dev/null
+      "
+    networks:
+      elk-net:
+        aliases:
+          - rabbit3
 
+  rabbit-final:
+    image: curlimages/curl:7.85.0
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+      rabbit2:
+        condition: service_healthy
+      rabbit3:
+        condition: service_healthy
+    volumes:
+      - ./rabbitmq/definitions.json:/definitions.json:ro
+    entrypoint: >
+      sh -c '
+        echo "$(date) waiting for RabbitMQ cluster…";
+        until curl -s -u "${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}" \
+            http://rabbit1:15672/api/nodes | grep -q rabbit@rabbit3; do
+          sleep 5;
+        done;
+        echo "$(date) importing definitions…";
+        curl -u "${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}" \
+             -H "Content-Type: application/json" \
+             -X POST \
+             --data-binary @/definitions.json \
+             http://rabbit1:15672/api/definitions;
+        echo "$(date) done.";
+      '
   # ─ Elasticsearch ───────────────────────────────────────────
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
@@ -78,9 +210,10 @@ services:
   logstash1:
     image: docker.elastic.co/logstash/logstash:8.13.4
     container_name: logstash1
-    mem_limit: "2g"
     depends_on:
       - rabbit1
+      - rabbit2
+      - rabbit3
       - es-init
     volumes:
       - ./logstash/pipeline1:/usr/share/logstash/pipeline
@@ -100,9 +233,10 @@ services:
   logstash2:
     image: docker.elastic.co/logstash/logstash:8.13.4
     container_name: logstash2
-    mem_limit: "2g"
     depends_on:
       - rabbit1
+      - rabbit2
+      - rabbit3
       - es-init
     volumes:
       - ./logstash/pipeline1:/usr/share/logstash/pipeline
@@ -122,9 +256,10 @@ services:
   logstash3:
     image: docker.elastic.co/logstash/logstash:8.13.4
     container_name: logstash3
-    mem_limit: "2g"
     depends_on:
       - rabbit1
+      - rabbit2
+      - rabbit3
       - es-init
     volumes:
       - ./logstash/pipeline1:/usr/share/logstash/pipeline
@@ -145,7 +280,6 @@ services:
     image: grafana/grafana-oss:latest
     depends_on:
       - elasticsearch
-    mem_limit: "512m"
     ports:
       - "${EXTERNAL_GRAFANA_PORT}:3000"
     environment:
@@ -168,11 +302,9 @@ services:
     networks:
       - elk-net
     restart: unless-stopped
-
   redis:
     image: redis:7.2
     container_name: redis
-    mem_limit: "512m"
     ports:
       - "6379:6379"
     volumes:

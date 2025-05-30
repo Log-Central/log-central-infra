@@ -1,0 +1,5 @@
+FROM alpine:latest
+RUN apk add --no-cache curl jq socat
+COPY update_map.sh /update_map.sh
+RUN chmod +x /update_map.sh
+CMD ["/update_map.sh"]

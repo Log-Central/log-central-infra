@@ -1,0 +1,4 @@
+logs_pipeline_1    50001
+logs_pipeline_2    50002
+logs_pipeline_3    50003
+worker_tasks_queue 50004
