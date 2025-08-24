@@ -1,0 +1,101 @@
+{
+  "id": null,
+  "title": "RabbitMQ EPS Dashboard",
+  "tags": ["rabbitmq", "eps", "throughput"],
+  "timezone": "browser",
+  "schemaVersion": 30,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Ack Rate (EPS per Queue)",
+      "targets": [
+        {
+          "expr": "rate(rabbitmq_queue_messages_acked_total[1m])",
+          "legendFormat": "{{queue}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "eps",
+          "decimals": 0,
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Publish Rate (Events/sec)",
+      "targets": [
+        {
+          "expr": "rate(rabbitmq_queue_messages_published_total[1m])",
+          "legendFormat": "{{queue}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "eps",
+          "decimals": 0,
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Unacked Messages",
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_messages_unacked",
+          "legendFormat": "{{queue}}",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "datasource",
+        "name": "DS_PROMETHEUS",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" }
+      }
+    ]
+  }
+}

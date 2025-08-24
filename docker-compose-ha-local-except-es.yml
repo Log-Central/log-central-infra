@@ -1,0 +1,262 @@
+version: "3.9"
+services:
+  haproxy:
+    image: haproxy:2.4
+    user: haproxy
+    entrypoint: >
+      sh -c "
+        exec haproxy -f /usr/local/etc/haproxy/haproxy.cfg
+      "
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+      rabbit2:
+        condition: service_healthy
+      rabbit3:
+        condition: service_healthy
+    tmpfs:
+      - /tmp/haproxy:mode=1777,size=16m
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "5672:5672"
+      - "${EXTERNAL_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    networks:
+      elk-net:
+        aliases:
+          - haproxy
+
+  # ─ RabbitMQ 3-node Quorum cluster ──────────────────────────
+  rabbit1:
+    build:
+      context: ./rabbitmq-cluster
+      dockerfile: Dockerfile
+    hostname: rabbit1
+    container_name: rabbit1
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit1
+    volumes:
+      - ./rabbitmq-cluster/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - rabbit1-data:/var/lib/rabbitmq
+    ports:
+      - "15692:15692" # Prometheus metrics
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      elk-net:
+        aliases:
+          - rabbit1
+
+  rabbit2:
+    build:
+      context: ./rabbitmq-cluster
+      dockerfile: Dockerfile
+    hostname: rabbit2
+    container_name: rabbit2
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit2
+    volumes:
+      - ./rabbitmq-cluster/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - rabbit2-data:/var/lib/rabbitmq
+    ports:
+      - "15693:15692"
+    entrypoint: >
+      bash -c "
+        rabbitmq-server -detached &&
+        sleep 10 &&
+        rabbitmqctl stop_app &&
+        rabbitmqctl join_cluster ${RABBITMQ_NODENAME_PREFIX}rabbit1 &&
+        rabbitmqctl start_app &&
+        tail -f /dev/null
+      "
+    networks:
+      elk-net:
+        aliases:
+          - rabbit2
+
+  rabbit3:
+    build:
+      context: ./rabbitmq-cluster
+      dockerfile: Dockerfile
+    hostname: rabbit3
+    container_name: rabbit3
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=${RABBITMQ_NODENAME_PREFIX}rabbit3
+    volumes:
+      - ./rabbitmq-cluster/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - rabbit3-data:/var/lib/rabbitmq
+    ports:
+      - "15694:15692"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    entrypoint: >
+      bash -c "
+        rabbitmq-server -detached &&
+        sleep 10 &&
+        rabbitmqctl stop_app &&
+        rabbitmqctl join_cluster ${RABBITMQ_NODENAME_PREFIX}rabbit1 &&
+        rabbitmqctl start_app &&
+        tail -f /dev/null
+      "
+    networks:
+      elk-net:
+        aliases:
+          - rabbit3
+
+
+  rabbit-final:
+    image: curlimages/curl:7.85.0
+    depends_on:
+      rabbit1:
+        condition: service_healthy
+      rabbit2:
+        condition: service_healthy
+      rabbit3:
+        condition: service_healthy
+    volumes:
+      - ./rabbitmq-cluster/definitions.json:/definitions.json:ro
+    entrypoint: >
+      sh -c '
+        set -eu
+        USER=$${RABBITMQ_DEFAULT_USER:-guest}
+        PASS=$${RABBITMQ_DEFAULT_PASS:-guest}
+        HOST="rabbit1:15672"
+
+        echo "$$(date) ⏳  waiting for rabbit1/2/3 to join…"
+        while :; do
+          json=$$(curl -s -u "$$USER:$$PASS" "http://$$HOST/api/nodes" || true)
+
+          echo "$$json" | grep -q "\"name\":\"rabbit@rabbit1\"" || { sleep 5; continue; }
+          echo "$$json" | grep -q "\"name\":\"rabbit@rabbit2\"" || { sleep 5; continue; }
+          echo "$$json" | grep -q "\"name\":\"rabbit@rabbit3\"" || { sleep 5; continue; }
+
+          break
+        done
+
+        echo "Waiting for 30 seconds...."
+        sleep 30
+
+        echo "$$(date) ✅  cluster ready. importing definitions…"
+        curl -sS -u "$$USER:$$PASS" -H "Content-Type: application/json" \
+            -X POST --data-binary @/definitions.json \
+            "http://$$HOST/api/definitions"
+        echo "$$(date) 🎉  done."
+      '
+    networks:
+      - elk-net
+
+  # ─ Logstash Consumers ────────────────────────────────────
+  logstash1:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash1
+    depends_on:
+      - rabbit1
+      - rabbit2
+      - rabbit3
+    volumes:
+      - ./logstash/pipeline1:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  logstash2:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash2
+    depends_on:
+      - rabbit1
+      - rabbit2
+      - rabbit3
+    volumes:
+      - ./logstash/pipeline2:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  logstash3:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash3
+    depends_on:
+      - rabbit1
+      - rabbit2
+      - rabbit3
+    volumes:
+      - ./logstash/pipeline3:/usr/share/logstash/pipeline
+    networks:
+      - elk-net
+
+  # ─ Prometheus ────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - elk-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    depends_on:
+      - prometheus
+    ports:
+      - "${EXTERNAL_GRAFANA_PORT}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_X_FRAME_OPTIONS=
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/dashboards
+    networks:
+      - elk-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    networks:
+      - elk-net
+
+networks:
+  elk-net:
+    driver: bridge
+
+volumes:
+  grafana-data:
+  redis-data:
+  rabbit1-data:
+  rabbit2-data:
+  rabbit3-data:
